@@ -1,6 +1,7 @@
 library(dplyr)
 library(magrittr)
 library(stringr)
+library(biglm)
 
 # the thought is that we should have only those things that are of interest to 
 # both ui.R and server.R
@@ -42,3 +43,18 @@ var_factor <-
   names 
 
 var_names_factor <- var_names[var_names %in% var_factor] 
+
+# we want to rename and combine countries
+
+# we want to group by country, then look at making a linear model WRT Television
+student_models <-
+  student2012 %>%
+  select(CNT, PV1MATH, ST27Q02) %>%
+  mutate(PV1MATH = as.numeric(PV1MATH)) %>%
+  group_by(CNT) %>%
+  do(model = lm(PV1MATH ~ ST27Q02, data = .))
+
+# student_results <- 
+#   student_models %>%
+#   summarise()
+
