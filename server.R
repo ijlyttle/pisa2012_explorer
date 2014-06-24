@@ -31,6 +31,41 @@ shinyServer(function(input, output) {
     )
   })
   
+  # plot showing the counts
+  output$gg_count <- renderPlot({
+    ggplot(data = rct_data()) +
+      geom_rect(
+        aes(fill = CNT),
+        xmin = -Inf, xmax = Inf, 
+        ymin = -Inf, ymax = Inf,
+        alpha = 0.5,
+        data = data.frame(CNT = unique(rct_data()$CNT))
+      ) + 
+      geom_bar(
+        aes_string(x = input$factor_outer, group = input$factor_inner),
+        position = "dodge", 
+        fill = "white", 
+        alpha = 1,
+        color = "black"
+      ) +   
+      geom_bar(aes_string(x = input$factor_outer, alpha = input$factor_inner),
+               position = "dodge", 
+               fill = "blue"
+      ) +   
+      facet_grid(CNT ~ ., scales = "free_y") + 
+      scale_x_discrete(name = rct_labels()[["outer"]]) +  
+      scale_y_continuous(name = "number of students") +
+      scale_alpha_discrete(
+        na.value = 0, 
+        name = rct_labels()[["inner"]],
+        guide = guide_legend(title.position = "top")) +  
+      scale_fill_brewer(type = "seq", palette = "BuGn", guide = FALSE) +
+      theme(
+        legend.position = "bottom",
+        axis.text.x = element_text(angle = 30, hjust = 1)
+      )
+  }, height = 750)
+  
   # plot showing the scores
   output$gg_score <- renderPlot({
     ggplot(data = rct_data()) + 
@@ -52,35 +87,15 @@ shinyServer(function(input, output) {
       facet_grid(CNT ~ .) + 
       scale_x_discrete(name = rct_labels()[["outer"]]) +  
       scale_y_continuous(limits = c(0, 1000), name = rct_labels()[["score"]]) +
-      scale_alpha_discrete(na.value = 0, name = rct_labels()[["inner"]]) +  
-      scale_fill_brewer(type = "seq", palette = "BuGn", guide = FALSE) 
-  })
-
-  output$gg_count <- renderPlot({
-    ggplot(data = rct_data()) +
-      geom_rect(
-        aes(fill = CNT),
-        xmin = -Inf, xmax = Inf, 
-        ymin = -Inf, ymax = Inf,
-        alpha = 0.5,
-        data = data.frame(CNT = unique(rct_data()$CNT))
-      ) + 
-      geom_bar(
-        aes_string(x = input$factor_outer, group = input$factor_inner),
-        position = "dodge", 
-        fill = "white", 
-        alpha = 1,
-        color = "black"
-      ) +   
-      geom_bar(aes_string(x = input$factor_outer, alpha = input$factor_inner),
-        position = "dodge", 
-        fill = "blue"
-      ) +   
-      facet_grid(CNT ~ ., scales = "free_y") + 
-      scale_x_discrete(name = rct_labels()[["outer"]]) +  
-      scale_y_continuous(name = "number of students") +
-      scale_alpha_discrete(range = c(0.1, 0.9), na.value = 0, name = rct_labels()[["inner"]]) +  
-      scale_fill_brewer(type = "seq", palette = "BuGn", guide = FALSE) 
-  })
-  
+      scale_alpha_discrete(
+        na.value = 0, 
+        name = rct_labels()[["inner"]],
+        guide = guide_legend(title.position = "top")) +  
+      scale_fill_brewer(type = "seq", palette = "BuGn", guide = FALSE) +
+      theme(
+        legend.position = "bottom",
+        axis.text.x = element_text(angle = 30, hjust = 1)
+      )
+  }, height = 750)
+    
 })
