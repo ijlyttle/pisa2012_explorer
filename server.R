@@ -31,6 +31,61 @@ shinyServer(function(input, output) {
     )
   })
   
+  rct_countries <- reactive({
+    
+    str_factor <-
+      switch(
+        input$group,
+        factor_outer = input$factor_outer,
+        factor_inner = input$factor_inner
+      )
+    
+    # get the just the data we need
+    student_score_factor <-
+      student2012 %>%
+      select(
+        country = CNT, 
+        score = get(input$subject), 
+        fctr = get(str_factor)
+      ) %>%
+      mutate(
+        score = as.numeric(score),
+        fctr = ordered(fctr)
+      )   
+    
+    # create groups
+    student_model <- 
+      student_score_factor %>%
+      group_by(country) %>%
+      do(model = lm(score ~ fctr, data = .)) %>%
+      mutate(
+        linear_coef = get_linear_coef(model),
+        pval = get_pval(model),
+        corr = ordered(
+          get_cluster(linear_coef, pval, 0.05), 
+          levels = c("significant negative",
+                     "not significant",
+                     "significant positive")
+        )
+      ) %>%
+      select(-model)
+    
+    # determine median score, join groups
+    student_summary <- 
+      student_score_factor %>%
+      group_by(country) %>%
+      summarize(median = median(score), count = n()) %>%
+      left_join(student_model, by = "country")
+    
+    # reorder the countries by median score, for display
+    student_summary <-
+      student_summary %>%
+      mutate(country = reorder(country, median))  
+    
+    # return student_summary
+    
+  })
+  
   # plot showing the counts
   output$gg_count <- renderPlot({
     ggplot(data = rct_data()) +
@@ -48,9 +103,10 @@ shinyServer(function(input, output) {
         alpha = 1,
         color = "black"
       ) +   
-      geom_bar(aes_string(x = input$factor_outer, alpha = input$factor_inner),
-               position = "dodge", 
-               fill = "blue"
+      geom_bar(
+        aes_string(x = input$factor_outer, alpha = input$factor_inner),
+        position = "dodge", 
+        fill = "blue"
       ) +   
       facet_grid(CNT ~ ., scales = "free_y") + 
       scale_x_discrete(name = rct_labels()[["outer"]]) +  
@@ -97,5 +153,21 @@ shinyServer(function(input, output) {
         axis.text.x = element_text(angle = 30, hjust = 1)
       )
   }, height = 750)
+  
+  # plot showing country groups
+  output$gg_group <- renderPlot({
     
+    ggplot(
+      aes(x = median, y = country, size = count),
+      data = rct_countries()
+    ) +
+      geom_point() +
+      scale_size_area(guide = guide_legend(title.position = "top")) +
+      facet_grid(corr ~ ., scales = "free", space = "free") +
+      theme(
+        legend.position = "bottom",
+        axis.text.x = element_text(angle = 30, hjust = 1)
+      )   
+  }, height = 750)
+  
 })
