@@ -54,10 +54,10 @@ shinyUI(fluidPage(
     column(
       width = 3,
       input_subject,
-      input_group,
-      input_country,
       input_factor_inner,
-      input_factor_outer
+      input_factor_outer,
+      input_group,
+      plotOutput("gg_map")
     ),
     
     column(

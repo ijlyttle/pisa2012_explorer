@@ -7,19 +7,147 @@
 
 library(shiny)
 library(ggplot2)
+library(stringr)
+library(rworldmap)
+
+# taken from Di's work
+extractPolygons <- function(shapes) {
+ 
+  library(plyr)
+  
+  dframe <- ldply(1:length(shapes@polygons), function(i) {
+    ob <- shapes@polygons[[i]]@Polygons
+    dframe <- ldply(1:length(ob), function(j) {
+      x <- ob[[j]]
+      co <- x@coords
+      data.frame(co, order=1:nrow(co), group=j)
+    })
+    dframe$region <- i
+    dframe$name <- shapes@polygons[[i]]@ID
+    dframe$area <- shapes@polygons[[i]]@area
+    dframe
+  })
+  # construct a group variable from both group and polygon:
+  dframe$group <- interaction(dframe$region, dframe$group)
+  
+  detach("package:plyr")
+  
+  dframe
+}
+
+world <- getMap(resolution = "low")
+world.polys <- extractPolygons(world)
+
+# To get a blank background on map
+new_theme_empty <- theme_bw()
+new_theme_empty$line <- element_blank()
+new_theme_empty$rect <- element_blank()
+new_theme_empty$strip.text <- element_blank()
+new_theme_empty$axis.text <- element_blank()
+new_theme_empty$plot.title <- element_blank()
+new_theme_empty$axis.title <- element_blank()
+new_theme_empty$plot.margin <- structure(c(0, 0, -1, -1), unit = "lines", valid.unit = 3L, class = "unit")
+
+# params
+plot_height <- 825
 
 # given the value of a vector, get its name
 val_get_name <- function(x, lst){
   names(lst[lst == x])[[1]]
 }
 
-shinyServer(function(input, output) {
+get_linear_coef <- function(model){
+  coef(summary(model))[2, 1]
+}
 
-  # deal only with data in selected countries
-  rct_data <- reactive({
-    df <- 
+get_pval <- function(model){
+  coef(summary(model))[2, 4]
+}
+
+get_cluster <- function(linear_coef, pval, sig){
+  
+  cluster <- 
+    ifelse (
+      pval > sig,
+      "not significant",
+      ifelse (
+        linear_coef > 0,
+        "positive",
+        "negative"
+      )
+    ) 
+  
+  cluster
+}
+
+shinyServer(function(input, output) {
+  
+  rct_data_new <- reactive({
+    
+    df <-
       student2012 %>%
-      filter(CNT %in% input$country) 
+      select(
+        country = CNT,
+        score = get(input$subject),
+        factor_outer = get(input$factor_outer),
+        factor_inner = get(input$factor_inner)
+      ) %>%
+      mutate(
+        score = as.numeric(score),
+        factor_outer = ordered(factor_outer),
+        factor_inner = ordered(factor_inner),        
+      )  
+    
+    df
+    
+  })
+  
+  rct_countries <- reactive({
+    
+    str_formula <- str_join("score ~", input$group, sep = " ")
+    
+    # create groups
+    student_model <- 
+      rct_data_new()  %>%
+      group_by(country) %>%
+      do(model = lm(str_formula, data = .)) %>%
+      mutate(
+        linear_coef = get_linear_coef(model),
+        pval = get_pval(model),
+        group_corr = ordered(
+          get_cluster(linear_coef, pval, 0.05), 
+          levels = c("negative",
+                     "not significant",
+                     "positive")
+        )
+      ) %>%
+      select(-model)
+    
+    # determine median score, join groups
+    student_summary <- 
+      rct_data_new() %>%
+      group_by(country) %>%
+      summarize(median = median(score), count = n()) %>%
+      left_join(student_model, by = "country")
+    
+    # reorder the countries by median score, for display
+    student_summary <-
+      student_summary %>%
+      mutate(country = reorder(country, median))  
+    
+    # return student_summary
+    student_summary
+    
+  })
+  
+  rct_data_group <- reactive({
+    
+    df_group <- rct_countries() %>% select(country, group_corr)
+    
+    df <- 
+      rct_data_new() %>%
+      left_join(df_group, by = "country")
+    
   })
   
   # change the labels according to the variable selections
@@ -31,84 +159,35 @@ shinyServer(function(input, output) {
     )
   })
   
-  rct_countries <- reactive({
-    
-    str_factor <-
-      switch(
-        input$group,
-        factor_outer = input$factor_outer,
-        factor_inner = input$factor_inner
-      )
-    
-    # get the just the data we need
-    student_score_factor <-
-      student2012 %>%
-      select(
-        country = CNT, 
-        score = get(input$subject), 
-        fctr = get(str_factor)
-      ) %>%
-      mutate(
-        score = as.numeric(score),
-        fctr = ordered(fctr)
-      )   
-    
-    # create groups
-    student_model <- 
-      student_score_factor %>%
-      group_by(country) %>%
-      do(model = lm(score ~ fctr, data = .)) %>%
-      mutate(
-        linear_coef = get_linear_coef(model),
-        pval = get_pval(model),
-        corr = ordered(
-          get_cluster(linear_coef, pval, 0.05), 
-          levels = c("significant negative",
-                     "not significant",
-                     "significant positive")
-        )
-      ) %>%
-      select(-model)
-    
-    # determine median score, join groups
-    student_summary <- 
-      student_score_factor %>%
-      group_by(country) %>%
-      summarize(median = median(score), count = n()) %>%
-      left_join(student_model, by = "country")
-    
-    # reorder the countries by median score, for display
-    student_summary <-
-      student_summary %>%
-      mutate(country = reorder(country, median))  
-    
-    # return student_summary
-    
+
+  
+  observe({
+    print(summary(rct_data_map()))
   })
   
   # plot showing the counts
   output$gg_count <- renderPlot({
-    ggplot(data = rct_data()) +
+    ggplot(data = rct_data_group()) +
       geom_rect(
-        aes(fill = CNT),
+        aes(fill = group_corr),
         xmin = -Inf, xmax = Inf, 
         ymin = -Inf, ymax = Inf,
         alpha = 0.5,
-        data = data.frame(CNT = unique(rct_data()$CNT))
+        data = data.frame(group_corr = unique(rct_data_group()$group_corr))
       ) + 
       geom_bar(
-        aes_string(x = input$factor_outer, group = input$factor_inner),
+        aes(x = factor_outer, group = factor_inner),
         position = "dodge", 
         fill = "white", 
         alpha = 1,
         color = "black"
       ) +   
       geom_bar(
-        aes_string(x = input$factor_outer, alpha = input$factor_inner),
+        aes(x = factor_outer, alpha = factor_inner),
         position = "dodge", 
         fill = "blue"
       ) +   
-      facet_grid(CNT ~ ., scales = "free_y") + 
+      facet_grid(group_corr ~ ., scales = "free_y") + 
       scale_x_discrete(name = rct_labels()[["outer"]]) +  
       scale_y_continuous(name = "number of students") +
       scale_alpha_discrete(
@@ -120,27 +199,28 @@ shinyServer(function(input, output) {
         legend.position = "bottom",
         axis.text.x = element_text(angle = 30, hjust = 1)
       )
-  }, height = 750)
+  }, height = plot_height)
   
   # plot showing the scores
   output$gg_score <- renderPlot({
-    ggplot(data = rct_data()) + 
+    ggplot(data = rct_data_group()) + 
       geom_rect(
-        aes(fill = CNT),
+        aes(fill = group_corr),
         xmin = -Inf, xmax = Inf, 
         ymin = -Inf, ymax = Inf,
         alpha = 0.5,
-        data = data.frame(CNT = unique(rct_data()$CNT))
+        data = data.frame(group_corr = unique(rct_data_group()$group_corr))
       ) + 
       geom_violin(
-        aes_string(x = input$factor_outer, y = input$subject),
+        aes(x = factor_outer, y = score),
         scale = "width"
       ) + 
       geom_boxplot(
-        aes_string(x = input$factor_outer, y = input$subject, alpha = input$factor_inner),
-        fill = "blue"
+        aes(x = factor_outer, y = score, alpha = factor_inner),
+        fill = "blue",
+        outlier.shape = NA
       ) + 
-      facet_grid(CNT ~ .) + 
+      facet_grid(group_corr ~ .) + 
       scale_x_discrete(name = rct_labels()[["outer"]]) +  
       scale_y_continuous(limits = c(0, 1000), name = rct_labels()[["score"]]) +
       scale_alpha_discrete(
@@ -152,22 +232,58 @@ shinyServer(function(input, output) {
         legend.position = "bottom",
         axis.text.x = element_text(angle = 30, hjust = 1)
       )
-  }, height = 750)
+  }, height = plot_height)
   
   # plot showing country groups
   output$gg_group <- renderPlot({
     
-    ggplot(
-      aes(x = median, y = country, size = count),
-      data = rct_countries()
-    ) +
-      geom_point() +
+    ggplot() +
+      geom_rect(
+        aes(fill = group_corr),
+        xmin = -Inf, xmax = Inf, 
+        ymin = -Inf, ymax = Inf,
+        alpha = 0.5,
+        data = data.frame(group_corr = unique(rct_countries()$group_corr))
+      ) + 
+      geom_point(      
+        aes(x = median, y = country, size = count),
+        alpha = 0.75,
+        data = rct_countries()
+      ) +
+      facet_grid(group_corr ~ ., scales = "free", space = "free") +
       scale_size_area(guide = guide_legend(title.position = "top")) +
-      facet_grid(corr ~ ., scales = "free", space = "free") +
+      scale_fill_brewer(
+        type = "seq", 
+        palette = "BuGn", 
+        guide = guide_legend(
+          title = "Correlation with factor",
+          title.position = "top"
+        )
+      ) +
       theme(
         legend.position = "bottom",
         axis.text.x = element_text(angle = 30, hjust = 1)
       )   
-  }, height = 750)
+  }, height = plot_height)
+  
+  rct_data_map <- reactive({
+    
+    map_data <- 
+      rct_data_group() %>%
+      mutate(name = country) %>%
+      select(name, group_corr) %>%
+      left_join(world.polys, by = "name")
+    
+  })
+  
+  output$gg_map <- reactive({
+    
+#    ggplot(data=world.polys) + 
+#      geom_path(aes(x=X1, y=X2, order=order, group=group), colour=I("grey70")) + 
+#      geom_polygon(data=rct_data_map(), aes(x=X1, y=X2, order=order, group=group, fill=group_corr)) +
+#      new_theme_empty + 
+#      theme(legend.position="none")
+    
+  })
   
 })

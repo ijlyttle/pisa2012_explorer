@@ -15,12 +15,48 @@ fn_make_factor <- function(vec){
   vec <- factor(vec, levels = sort(unique(vec)))
 }
 
+# new variable for presence of TV at home
+student2012$tv_at_home <- 
+  ifelse(
+    student2012$ST27Q02 == "None",
+    "No",
+    "Yes"
+  )
+student2012dict["tv_at_home"] <- "At Home - Television"
+
+# adjust names for mapping purpose, and others
+fn_sub_name <- function(names, name_old, name_new){
+  names[names == name_old] <- name_new
+  
+  names
+} 
+
+country_names <- as.character(student2012$CNT)
+
+country_names <- fn_sub_name(country_names, "Serbia", "Republic of Serbia")
+country_names <- fn_sub_name(country_names, "Korea", "South Korea")
+country_names <- fn_sub_name(country_names, "Chinese Taipei", "Taiwan")
+country_names <- fn_sub_name(country_names, "Slovak Republic", "Slovakia")
+country_names <- fn_sub_name(country_names, "Russian Federation", "Russia")
+country_names <- fn_sub_name(country_names, "Perm(Russian Federation)", "Russia")
+country_names <- fn_sub_name(country_names, "Hong Kong-China", "Hong Kong S.A.R.")
+country_names <- fn_sub_name(country_names, "China-Shanghai", "China")
+country_names <- fn_sub_name(country_names, "China-Macau", "China")
+country_names <- fn_sub_name(country_names, "Connecticut (USA)", "United States of America")
+country_names <- fn_sub_name(country_names, "Florida (USA)", "United States of America")
+country_names <- fn_sub_name(country_names, "Massachusetts (USA)", "United States of America")
+
+country_names <- as.factor(country_names)
+
+student2012$CNT <- country_names
+
 # hacky - fix when time
 student2012$ST01Q01 <- fn_make_factor(student2012$ST01Q01)
 student2012$ST02Q01 <- fn_make_factor(student2012$ST02Q01)
 student2012$ST06Q01 <- fn_make_factor(student2012$ST06Q01)
 student2012$ST21Q01 <- fn_make_factor(student2012$ST21Q01)
 student2012$ST115Q01 <- fn_make_factor(student2012$ST115Q01)
+student2012$tv_at_home <- fn_make_factor(student2012$tv_at_home)
 
 # switch order in named vector for dictionary
 var_names <- names(student2012dict)
@@ -46,80 +82,7 @@ var_names_factor <- var_names[var_names %in% var_factor]
 
 # we want to rename and combine countries
 
-get_linear_coef <- function(model){
-  coef(summary(model))[2, 1]
-}
 
-get_pval <- function(model){
-  coef(summary(model))[2, 4]
-}
 
-get_cluster <- function(linear_coef, pval, sig){
-  
-  cluster <- 
-    ifelse (
-      pval > sig,
-      "not significant",
-      ifelse (
-        linear_coef > 0,
-       "significant positive",
-       "significant negative"
-      )
-    ) 
-      
-  cluster
-}
 
-# we want to group by country, then look at making a linear model WRT Television
-str_subject <- "PV1MATH"
-str_factor_inner <- "ST27Q02"
-
-student_score_factor <-
-  student2012 %>%
-  select(
-    country = CNT, 
-    score = get(str_subject), 
-    factor_inner = get(str_factor_inner)
-  ) %>%
-  mutate(
-    score = as.numeric(score),
-    factor_inner = ordered(factor_inner)
-  )   
-  
-student_model <- 
-  student_score_factor %>%
-  group_by(country) %>%
-  do(model = lm(score ~ factor_inner, data = .)) %>%
-  mutate(
-    linear_coef = get_linear_coef(model),
-    pval = get_pval(model),
-    corr = ordered(
-      get_cluster(linear_coef, pval, 0.05), 
-      levels = c("significant negative",
-                 "not significant",
-                 "significant positive")
-    )
-  ) %>%
-  select(-model)
-
-student_summary <- 
-  student_score_factor %>%
-  group_by(country) %>%
-  summarize(median = median(score), count = n()) %>%
-  left_join(student_model, by = "country")
-
-student_summary <-
-  student_summary %>%
-  mutate(country = reorder(country, median))
-
-ggplot(
-  aes(x = median, y = country),
-  data = student_summary
-) +
-  geom_point() +
-  facet_grid(corr ~ ., scales = "free")
-
-# student_results <- 
-#   student_models %>%
-#   summarise()
 
