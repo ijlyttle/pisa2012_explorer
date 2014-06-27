@@ -27,7 +27,7 @@ input_factor_inner <-
     "factor_inner",
     label = "Inner factor",
     choices = var_names_factor,
-    selected = "ST27Q02" # televisions
+    selected = "tv_mod" # televisions - modified
   )  
 
 input_factor_outer <-
@@ -35,7 +35,7 @@ input_factor_outer <-
     "factor_outer",
     label = "Outer factor",
     choices = var_names_factor,
-    selected = "ST28Q01" # books at home
+    selected = "ST26Q03" # study place
   )
 
 shinyUI(fluidPage(

@@ -114,9 +114,9 @@ shinyServer(function(input, output, session) {
         pval = get_pval(model),
         group_corr = ordered(
           get_cluster(linear_coef, pval, 0.05), 
-          levels = c("positive",
+          levels = c("negative",
                      "not significant",
-                     "negative")
+                     "positive")
         )
       ) %>%
       select(-model)
