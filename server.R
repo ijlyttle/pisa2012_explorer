@@ -12,8 +12,6 @@ library(rworldmap)
 
 # taken from Di's work
 extractPolygons <- function(shapes) {
- 
-  library(plyr)
   
   dframe <- ldply(1:length(shapes@polygons), function(i) {
     ob <- shapes@polygons[[i]]@Polygons
@@ -30,13 +28,13 @@ extractPolygons <- function(shapes) {
   # construct a group variable from both group and polygon:
   dframe$group <- interaction(dframe$region, dframe$group)
   
-  detach("package:plyr")
-  
   dframe
 }
 
 world <- getMap(resolution = "low")
-world.polys <- extractPolygons(world)
+library(plyr)
+df_world <- extractPolygons(world)
+detach("package:plyr")
 
 # To get a blank background on map
 new_theme_empty <- theme_bw()
@@ -159,7 +157,20 @@ shinyServer(function(input, output) {
     )
   })
   
-
+  rct_data_map <- reactive({
+    
+    df_world <- 
+      df_world %>% 
+      select(long = X1, lat = X2, order, group, country = name)
+    
+    country_group <- rct_countries() %>% select(country, group_corr)
+    
+    map_data <- left_join(df_world, country_group, by = "country")  
+    
+    map_data
+    
+  })
+  
   
   observe({
     print(summary(rct_data_map()))
@@ -194,7 +205,7 @@ shinyServer(function(input, output) {
         na.value = 0, 
         name = rct_labels()[["inner"]],
         guide = guide_legend(title.position = "top")) +  
-      scale_fill_brewer(type = "seq", palette = "BuGn", guide = FALSE) +
+      scale_fill_brewer(type = "seq", palette = "RdYlGn", guide = FALSE) +
       theme(
         legend.position = "bottom",
         axis.text.x = element_text(angle = 30, hjust = 1)
@@ -227,7 +238,7 @@ shinyServer(function(input, output) {
         na.value = 0, 
         name = rct_labels()[["inner"]],
         guide = guide_legend(title.position = "top")) +  
-      scale_fill_brewer(type = "seq", palette = "BuGn", guide = FALSE) +
+      scale_fill_brewer(type = "seq", palette = "RdYlGn", guide = FALSE) +
       theme(
         legend.position = "bottom",
         axis.text.x = element_text(angle = 30, hjust = 1)
@@ -254,7 +265,7 @@ shinyServer(function(input, output) {
       scale_size_area(guide = guide_legend(title.position = "top")) +
       scale_fill_brewer(
         type = "seq", 
-        palette = "BuGn", 
+        palette = "RdYlGn", 
         guide = guide_legend(
           title = "Correlation with factor",
           title.position = "top"
@@ -266,24 +277,23 @@ shinyServer(function(input, output) {
       )   
   }, height = plot_height)
   
-  rct_data_map <- reactive({
+  output$gg_map <- renderPlot({
     
-    map_data <- 
-      rct_data_group() %>%
-      mutate(name = country) %>%
-      select(name, group_corr) %>%
-      left_join(world.polys, by = "name")
+    gg_map <-
+      ggplot(rct_data_map(), aes(long, lat)) +
+      geom_polygon(
+        aes(group = group, order = order, fill = group_corr), 
+        colour = "grey60", 
+        size = .3
+      ) +
+      scale_fill_brewer(type = "seq", palette = "RdYlGn", guide = FALSE) + 
+      ylim(-55, 85) +
+      new_theme_empty  
     
-  })
-  
-  output$gg_map <- reactive({
+    gg_map
     
-#    ggplot(data=world.polys) + 
-#      geom_path(aes(x=X1, y=X2, order=order, group=group), colour=I("grey70")) + 
-#      geom_polygon(data=rct_data_map(), aes(x=X1, y=X2, order=order, group=group, fill=group_corr)) +
-#      new_theme_empty + 
-#      theme(legend.position="none")
     
-  })
+    
+  }, height = 200)
   
 })

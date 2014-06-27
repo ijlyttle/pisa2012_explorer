@@ -22,15 +22,6 @@ input_group <-
                 `Outer factor` = "factor_outer")
   )
 
-input_country <-
-  selectInput(
-    "country",
-    label = "Countries",
-    choices = levels(student2012$CNT),
-    selected = c("United States of America", "Peru", "China-Shanghai"),
-    multiple = TRUE
-  )  
-
 input_factor_inner <-
   selectInput(
     "factor_inner",
