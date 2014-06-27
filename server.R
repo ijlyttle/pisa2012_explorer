@@ -236,7 +236,7 @@ shinyServer(function(input, output, session) {
         na.value = 0, 
         name = rct_labels()[["inner"]],
         guide = guide_legend(title.position = "top")) +  
-      scale_fill_brewer(type = "seq", palette = "RdYlGn", guide = FALSE) +
+      scale_fill_brewer(type = "seq", palette = "RdYlGn", guide = FALSE, drop = FALSE) +
       theme(
         legend.position = "bottom",
         axis.text.x = element_text(angle = 30, hjust = 1)
@@ -272,7 +272,7 @@ shinyServer(function(input, output, session) {
         na.value = 0, 
         name = rct_labels()[["inner"]],
         guide = guide_legend(title.position = "top")) +  
-      scale_fill_brewer(type = "seq", palette = "RdYlGn", guide = FALSE) +
+      scale_fill_brewer(type = "seq", palette = "RdYlGn", guide = FALSE, drop = FALSE) +
       theme(
         legend.position = "bottom",
         axis.text.x = element_text(angle = 30, hjust = 1)
@@ -302,7 +302,7 @@ shinyServer(function(input, output, session) {
         name = "Number of students",
         guide = guide_legend(title.position = "top")
       ) + 
-      scale_fill_brewer(type = "seq",  palette = "RdYlGn", guide = FALSE) + 
+      scale_fill_brewer(type = "seq",  palette = "RdYlGn", guide = FALSE, drop = FALSE) + 
       theme(
         legend.position = "bottom",
         axis.text.x = element_text(angle = 30, hjust = 1)
@@ -332,7 +332,8 @@ shinyServer(function(input, output, session) {
             "'", 
             sep = ""),
           title.position = "top"
-        )
+        ),
+        drop = FALSE
       ) +      
       ylim(-55, 85) + 
       new_theme_empty +
