@@ -114,9 +114,9 @@ shinyServer(function(input, output) {
         pval = get_pval(model),
         group_corr = ordered(
           get_cluster(linear_coef, pval, 0.05), 
-          levels = c("negative",
+          levels = c("positive",
                      "not significant",
-                     "positive")
+                     "negative")
         )
       ) %>%
       select(-model)
@@ -173,7 +173,7 @@ shinyServer(function(input, output) {
   
   
   observe({
-    print(summary(rct_data_map()))
+#    print(summary(rct_data_map()))
   })
   
   # plot showing the counts
