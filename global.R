@@ -37,7 +37,11 @@ student2012$ST27Q05 <- ordered(student2012$ST27Q05)
 
 student2012$ST28Q01 <- ordered(student2012$ST28Q01)
 
+student2012$tv_mod <- student2012$ST27Q02
+student2012dict["tv_mod"] <- "How many - televisions (mod)"
 
+# combine zero and one tv's because so few students with zero
+levels(student2012$tv_mod) <- c("One or less", "One or less", "Two", "Three or more")
 
 # adjust names for mapping purpose, and others
 fn_sub_name <- function(names, name_old, name_new){

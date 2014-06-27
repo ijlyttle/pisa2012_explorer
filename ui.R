@@ -17,7 +17,7 @@ input_subject <-
 input_group <- 
   selectInput(
     "group",
-    label = "Group countries by",
+    label = "Consider correlation of score and",
     choices = c(`Inner factor` = "factor_inner", 
                 `Outer factor` = "factor_outer")
   )

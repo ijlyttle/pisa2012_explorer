@@ -78,7 +78,7 @@ get_cluster <- function(linear_coef, pval, sig){
   cluster
 }
 
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
   
   rct_data_new <- reactive({
     
@@ -171,9 +171,40 @@ shinyServer(function(input, output) {
     
   })
   
+  rct_choices_factor <- reactive({
+    vec <- c("factor_inner", "factor_outer")
+    name <- c(
+      input$factor_inner %>% val_get_name(var_names_factor),
+      input$factor_outer %>% val_get_name(var_names_factor)
+    )
+    
+    names(vec) <- name
+    
+    vec
+    
+  })
+  
+  rct_label_factor <- reactive({
+    poss <- rct_choices_factor()
+    choice <- names(poss[poss == input$group])
+    
+    choice
+  })
   
   observe({
+#    print(rct_choices_factor())
 #    print(summary(rct_data_map()))
+  })
+
+  observe({
+    
+    updateSelectInput(
+      session, 
+      inputId = "group", 
+      choices = rct_choices_factor(), 
+      selected = input$group
+    )
+    
   })
   
   # plot showing the counts
@@ -200,7 +231,7 @@ shinyServer(function(input, output) {
       ) +   
       facet_grid(group_corr ~ ., scales = "free_y") + 
       scale_x_discrete(name = rct_labels()[["outer"]]) +  
-      scale_y_continuous(name = "number of students") +
+      scale_y_continuous(name = "Number of students") +
       scale_alpha_discrete(
         na.value = 0, 
         name = rct_labels()[["inner"]],
@@ -233,7 +264,10 @@ shinyServer(function(input, output) {
       ) + 
       facet_grid(group_corr ~ .) + 
       scale_x_discrete(name = rct_labels()[["outer"]]) +  
-      scale_y_continuous(limits = c(0, 1000), name = rct_labels()[["score"]]) +
+      scale_y_continuous(
+        limits = c(0, 1000), 
+        name = str_join("Score (", rct_labels()[["score"]], ")", sep = "")
+      ) +
       scale_alpha_discrete(
         na.value = 0, 
         name = rct_labels()[["inner"]],
@@ -262,15 +296,13 @@ shinyServer(function(input, output) {
         data = rct_countries()
       ) +
       facet_grid(group_corr ~ ., scales = "free", space = "free") +
-      scale_size_area(guide = guide_legend(title.position = "top")) +
-      scale_fill_brewer(
-        type = "seq", 
-        palette = "RdYlGn", 
-        guide = guide_legend(
-          title = "Correlation with factor",
-          title.position = "top"
-        )
-      ) +
+      scale_x_continuous(name = "Median score") +
+      scale_y_discrete(name = "Country") +
+      scale_size_area(
+        name = "Number of students",
+        guide = guide_legend(title.position = "top")
+      ) + 
+      scale_fill_brewer(type = "seq",  palette = "RdYlGn", guide = FALSE) + 
       theme(
         legend.position = "bottom",
         axis.text.x = element_text(angle = 30, hjust = 1)
@@ -280,20 +312,36 @@ shinyServer(function(input, output) {
   output$gg_map <- renderPlot({
     
     gg_map <-
-      ggplot(rct_data_map(), aes(long, lat)) +
-      geom_polygon(
-        aes(group = group, order = order, fill = group_corr), 
-        colour = "grey60", 
-        size = .3
+      ggplot(
+        rct_data_map(), 
+        aes(x = long, 
+            y = lat, 
+            group = group, 
+            order = order, 
+            fill = group_corr)
       ) +
-      scale_fill_brewer(type = "seq", palette = "RdYlGn", guide = FALSE) + 
-      ylim(-55, 85) +
-      new_theme_empty  
+      geom_polygon(colour = "grey60", size = .3, show_guide = FALSE) +
+      geom_polygon() +
+      scale_fill_brewer(
+        type = "seq", 
+        palette = "RdYlGn", 
+        guide = guide_legend(
+          title = str_join(
+            "Correlation between score and\n'", 
+            rct_label_factor(),
+            "'", 
+            sep = ""),
+          title.position = "top"
+        )
+      ) +      
+      ylim(-55, 85) + 
+      new_theme_empty +
+      theme(legend.position = "bottom")
     
     gg_map
     
     
     
-  }, height = 200)
+  }, height = 250)
   
 })
