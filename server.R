@@ -320,14 +320,14 @@ shinyServer(function(input, output, session) {
             order = order, 
             fill = group_corr)
       ) +
-      geom_polygon(colour = "grey60", size = .3, show_guide = FALSE) +
-      geom_polygon() +
+      geom_polygon(alpha = 0.5, colour = "grey60", size = .3, show_guide = FALSE) +
+      geom_polygon(alpha = 0.5) +
       scale_fill_brewer(
         type = "seq", 
         palette = "RdYlGn", 
         guide = guide_legend(
           title = str_join(
-            "Correlation between score and\n'", 
+            "Correlation between 'Score' and\n'", 
             rct_label_factor(),
             "'", 
             sep = ""),
