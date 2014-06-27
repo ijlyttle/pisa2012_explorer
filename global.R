@@ -1,7 +1,6 @@
 library(dplyr)
 library(magrittr)
 library(stringr)
-library(biglm)
 
 # the thought is that we should have only those things that are of interest to 
 # both ui.R and server.R
