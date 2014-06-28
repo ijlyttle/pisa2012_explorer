@@ -18,7 +18,9 @@ input_subject <-
 input_group <- 
   selectInput(
     "group",
-    label = "Consider correlation of score and",
+    label = helpText(
+      "Group countries by correlation of",
+      strong("score"), "and", sep = " "),
     choices = c(`Inner factor` = "factor_inner", 
                 `Outer factor` = "factor_outer"),
     width = "100%"
@@ -55,29 +57,33 @@ shinyUI(fluidPage(
         tabPanel(
           title = "Input",
           input_subject,
-          input_factor_inner,
           input_factor_outer,
+          input_factor_inner,
           input_group
         ),
         tabPanel(
           title = "Information",
-          p("This app was built in conjunction with an entry to the",
+          p("This app was built as part of an entry to the",
             a("@useR! 2014 Data Visualization Contest,",
               href = "http://www.oecd.org/pisa/pisaproducts/datavisualizationcontest.htm"),
             "based on OECD's Programme for International Student Assessment (PISA) 2012."),
-          p("You may choose to examine different estimates of student proficiency in math,",
-            "reading, or science. You may also choose to examine the correlation of proficiency with a",
-            "variety of factors concerning the student's home, focusing on posessions."),
-          p("You may choose one of the factors to examine, on a country-by-country basis, the strength",
-            "and direction of the correlation. This determines the grouping of the countries."),
+          p("In exploring the data, you have a choice among different estimates of",
+            "student proficiency in the", strong("subjects"), "of math, reading, or science."),
+          p("You may also choose to examine the correlation of proficiency with a",
+            "variety of factors concerning the student's home, focusing on posessions.",
+            "Two such factors are chosen: an", strong("outer factor,"), 
+            "shown using the white violin-plots, and an",
+            strong("inner factor,"), "shown using the blue-colored box-plots."),
+          p("One of these factors is chosen for the", strong("correlation"),
+            "used to group the countries."),
           p("discuss technique for modeling, significance, also modifying the TV question")
         ),
         tabPanel(
           title = "Example",
-          p("Here will be discussed the default plots, TV's and study-space.")
+          includeMarkdown(file.path("example.md"))
         ),
         tabPanel(
-          title = "Credits",
+          title = "About",
           p("This web application was created in", a("shiny,", href = "http://shiny.rstudio.com"), 
             "an open-source framework to bring interactivity to analyses built using",
             a("R.", href = "http://www.r-project.org/")),
