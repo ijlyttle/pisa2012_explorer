@@ -1,4 +1,4 @@
-# pisa_viewer
+# pisa2012_explorer
 
 this is a shiny app used to explore relationships within the PISA 2012 dataset
 
