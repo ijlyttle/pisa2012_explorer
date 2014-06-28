@@ -2,7 +2,7 @@
 
 this is a shiny app used to explore relationships within the PISA 2012 dataset
 
-to get this to run, you will have to add `student2012.rda` and `student2012dict.rda` to the `data` directory. These are found at [http://beta.icm.edu.pl/PISAcontest/data/]
+to get this to run, you will have to add `student2012.rda` and `student2012dict.rda` to the `data` directory. These are found at the contest [website](http://beta.icm.edu.pl/PISAcontest/data/)
 
 here is a list of R packages you will need (all from CRAN):
 
